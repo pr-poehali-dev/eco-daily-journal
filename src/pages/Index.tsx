@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
 import EcoDiaryPage from '@/components/EcoDiaryPage';
+import EcoDiaryCover from '@/components/EcoDiaryCover';
 import { quotes, facts, tips, habits } from '@/data/ecoContent';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -234,6 +235,7 @@ export default function Index() {
         </div>
         
         <div ref={diaryPagesRef} className="hidden">
+          <EcoDiaryCover />
           {generate30Days().map((day, index) => (
             <EcoDiaryPage
               key={index}
