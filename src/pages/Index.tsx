@@ -1,42 +1,14 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import Icon from '@/components/ui/icon';
-
-const quotes = [
-  { text: "Каждый раз, когда вы тратите деньги, вы голосуете за тот мир, который хотите.", author: "Анна Лаппе" },
-  { text: "Мы не наследуем землю от наших предков, мы берём её взаймы у наших детей.", author: "Индейская мудрость" },
-  { text: "Величайшая угроза нашей планете — это вера в то, что кто-то другой её спасёт.", author: "Роберт Свон" },
-  { text: "Природа не нуждается в людях. Люди нуждаются в природе.", author: "Харрисон Форд" },
-];
-
-const facts = [
-  "Один переработанный алюминиевый стаканчик экономит энергию для работы телевизора в течение 3 часов",
-  "Производство 1 кг говядины требует 15 000 литров воды — столько же, сколько средний человек выпивает за 5 лет",
-  "Пластиковый пакет разлагается от 100 до 400 лет, многоразовая сумка окупается за 4 использования",
-  "Выключение света при выходе из комнаты экономит до 10% электроэнергии в год",
-];
-
-const tips = [
-  "Используйте уксус и соду вместо бытовой химии — это безопасно и эффективно",
-  "Храните продукты в стеклянных банках, а не в пластиковых пакетах",
-  "Приносите свою кружку в кофейню — это экономит до 500 одноразовых стаканчиков в год",
-  "Отключайте технику от розеток на ночь — в режиме ожидания она потребляет до 10% энергии",
-];
-
-const habits = [
-  { id: 'sort', label: 'Сортировал(а) мусор', icon: 'Recycle' },
-  { id: 'bottle', label: 'Использовал(а) многоразовую бутылку', icon: 'Droplets' },
-  { id: 'water', label: 'Сократил(а) потребление воды', icon: 'Waves' },
-  { id: 'plastic', label: 'Отказался(ась) от пластика', icon: 'Ban' },
-  { id: 'bike', label: 'Покатался(ась) на велосипеде или пешком', icon: 'Bike' },
-  { id: 'light', label: 'Выключил(а) свет при выходе', icon: 'Lightbulb' },
-  { id: 'food', label: 'Не выбросил(а) еду', icon: 'UtensilsCrossed' },
-  { id: 'bags', label: 'Использовал(а) тканевую сумку', icon: 'ShoppingBag' },
-];
+import EcoDiaryPage from '@/components/EcoDiaryPage';
+import { quotes, facts, tips, habits } from '@/data/ecoContent';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function Index() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -46,6 +18,8 @@ export default function Index() {
   const [randomQuote] = useState(quotes[Math.floor(Math.random() * quotes.length)]);
   const [randomFact] = useState(facts[Math.floor(Math.random() * facts.length)]);
   const [randomTip] = useState(tips[Math.floor(Math.random() * tips.length)]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const diaryPagesRef = useRef<HTMLDivElement>(null);
 
   const handleHabitToggle = (habitId: string) => {
     setCheckedHabits(prev =>
@@ -59,11 +33,76 @@ export default function Index() {
     window.print();
   };
 
+  const generate30Days = () => {
+    const days = [];
+    const startDate = new Date();
+    
+    for (let i = 0; i < 30; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + i);
+      
+      const dateStr = currentDate.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      
+      days.push({
+        date: dateStr,
+        quote: quotes[i % quotes.length],
+        fact: facts[i % facts.length],
+        tip: tips[i % tips.length],
+        dayNumber: i + 1
+      });
+    }
+    
+    return days;
+  };
+
+  const generatePDF = async () => {
+    setIsGenerating(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pages = diaryPagesRef.current?.querySelectorAll('.diary-page');
+      
+      if (!pages) {
+        setIsGenerating(false);
+        return;
+      }
+
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+        const canvas = await html2canvas(page, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdfWidth = 210;
+        const pdfHeight = 297;
+        
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      }
+      
+      pdf.save('eco-diary-30-days.pdf');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#E8DCC4] via-background to-[#C8D5BB] p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6 print:mb-4">
-          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-2 flex items-center justify-center gap-3">
+          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-2 flex items-center justify-center gap-3 flex-wrap">
             <Icon name="Leaf" size={40} className="text-accent" />
             Экологический ежедневник
             <Icon name="Sprout" size={40} className="text-accent" />
@@ -71,10 +110,14 @@ export default function Index() {
           <p className="text-muted-foreground">Каждый день — шаг к устойчивому будущему</p>
         </div>
 
-        <div className="mb-6 print:hidden flex justify-center gap-4">
+        <div className="mb-6 print:hidden flex justify-center gap-4 flex-wrap">
           <Button onClick={handlePrint} size="lg" className="gap-2">
+            <Icon name="FileText" size={20} />
+            Печать текущей страницы
+          </Button>
+          <Button onClick={generatePDF} size="lg" className="gap-2" disabled={isGenerating}>
             <Icon name="Download" size={20} />
-            Сохранить в PDF
+            {isGenerating ? 'Генерация...' : 'Скачать 30-дневный ежедневник (PDF)'}
           </Button>
         </div>
 
@@ -187,7 +230,20 @@ export default function Index() {
         </Card>
 
         <div className="mt-6 text-center text-sm text-muted-foreground print:hidden">
-          <p>Совет: для печати используйте альбомную ориентацию и масштаб 80-90%</p>
+          <p>Совет: для печати текущей страницы используйте альбомную ориентацию и масштаб 80-90%</p>
+        </div>
+        
+        <div ref={diaryPagesRef} className="hidden">
+          {generate30Days().map((day, index) => (
+            <EcoDiaryPage
+              key={index}
+              date={day.date}
+              quote={day.quote}
+              fact={day.fact}
+              tip={day.tip}
+              dayNumber={day.dayNumber}
+            />
+          ))}
         </div>
       </div>
 
