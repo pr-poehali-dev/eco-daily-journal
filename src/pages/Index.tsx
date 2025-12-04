@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,16 +11,62 @@ import { quotes, facts, tips, habits } from '@/data/ecoContent';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+interface DayEntry {
+  date: string;
+  goal: string;
+  notes: string;
+  checkedHabits: string[];
+}
+
 export default function Index() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [goal, setGoal] = useState('');
   const [notes, setNotes] = useState('');
   const [checkedHabits, setCheckedHabits] = useState<string[]>([]);
+  const [savedEntries, setSavedEntries] = useState<Record<string, DayEntry>>({});
   const [randomQuote] = useState(quotes[Math.floor(Math.random() * quotes.length)]);
   const [randomFact] = useState(facts[Math.floor(Math.random() * facts.length)]);
   const [randomTip] = useState(tips[Math.floor(Math.random() * tips.length)]);
   const [isGenerating, setIsGenerating] = useState(false);
   const diaryPagesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ecoDiaryEntries');
+    if (saved) {
+      setSavedEntries(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    const entry = savedEntries[date];
+    if (entry) {
+      setGoal(entry.goal);
+      setNotes(entry.notes);
+      setCheckedHabits(entry.checkedHabits);
+    } else {
+      setGoal('');
+      setNotes('');
+      setCheckedHabits([]);
+    }
+  }, [date, savedEntries]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const newEntries = {
+        ...savedEntries,
+        [date]: {
+          date,
+          goal,
+          notes,
+          checkedHabits
+        }
+      };
+      setSavedEntries(newEntries);
+      localStorage.setItem('ecoDiaryEntries', JSON.stringify(newEntries));
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [date, goal, notes, checkedHabits]);
 
   const handleHabitToggle = (habitId: string) => {
     setCheckedHabits(prev =>
