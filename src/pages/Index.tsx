@@ -8,6 +8,7 @@ import Icon from '@/components/ui/icon';
 import EcoDiaryPage from '@/components/EcoDiaryPage';
 import EcoDiaryCover from '@/components/EcoDiaryCover';
 import DiaryCalendar from '@/components/DiaryCalendar';
+import HabitsStatistics from '@/components/HabitsStatistics';
 import { quotes, facts, tips, habits } from '@/data/ecoContent';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -169,12 +170,13 @@ export default function Index() {
           </Button>
         </div>
 
-        <div className="mb-6 print:hidden">
+        <div className="grid md:grid-cols-2 gap-6 mb-6 print:hidden">
           <DiaryCalendar 
             currentDate={date}
             savedEntries={savedEntries}
             onDateSelect={setDate}
           />
+          <HabitsStatistics savedEntries={savedEntries} />
         </div>
 
         <Card className="p-6 md:p-8 shadow-lg bg-white/95 backdrop-blur print:shadow-none print:bg-white">
